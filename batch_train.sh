@@ -11,6 +11,7 @@ if [[ -n "$data" ]] && [[ -n "$start" ]] && [[ -n "$end" ]] && [[ -n "$gpu" ]]; 
     for i in $(eval echo {$start..$end})
     do
        CUDA_VISIBLE_DEVICES=$gpu python train.py --data_dir=$data --output_dir=$output --n_folds=$nfolds --pretrain_epochs=100 --finetune_epochs=200 --fold_idx=$i --resume=False
+       #CUDA_VISIBLE_DEVICES=$gpu python dream-gan/main_dream.py --data_dir=$data --output_dir=$output --n_folds=$nfolds --pretrain_epochs=100 --finetune_epochs=200 --fold_idx=$i --resume=False
     done
 else
     echo "argument error"

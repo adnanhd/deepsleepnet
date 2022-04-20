@@ -192,7 +192,12 @@ def main():
         if start_idx < 0: start_idx = 0
         if end_idx >= len(y): end_idx = len(y) - 1
         select_idx = np.arange(start_idx, end_idx+1)
+        basi_idx = np.arange(0, start_idx)
+        sonu_idx = np.arange(end_idx, len(y) - 1)
+
         print(("Data before selection: {}, {}".format(x.shape, y.shape)))
+        x_ = np.concatenate([x[basi_idx], x[sonu_idx]])
+        y_ = np.concatenate([y[basi_idx], y[sonu_idx]])
         x = x[select_idx]
         y = y[select_idx]
         print(("Data after selection: {}, {}".format(x.shape, y.shape)))
@@ -202,6 +207,8 @@ def main():
         save_dict = {
             "x": x, 
             "y": y, 
+            "x_": x_, 
+            "y_": y_, 
             "fs": sampling_rate,
             "ch_label": select_ch,
             "header_raw": h_raw,

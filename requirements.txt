@@ -1,0 +1,9 @@
+#CUDA toolkit 10.0 and CuDNN v7.6.4
+#Python 3.5.4 x64
+tensorflow-gpu==1.15.2
+matplotlib==1.5.3
+scikit-learn==0.19.1
+scipy==1.4.1
+numpy==1.18.2
+pandas==0.25.3
+mne==0.20.0

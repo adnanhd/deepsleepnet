@@ -684,6 +684,7 @@ class DeepSleepNetTrainer(Trainer):
                 print(" ")
                 print("[{}] Start fine-tuning ...\n".format(datetime.now()))
 
+            n_epochs=201
             # Load data
             if sess.run(global_step) < n_epochs:
                 data_loader = SeqDataLoader(
@@ -692,6 +693,9 @@ class DeepSleepNetTrainer(Trainer):
                     fold_idx=self.fold_idx
                 )
                 x_train, y_train, x_valid, y_valid = data_loader.load_train_data()
+                x_gan, y_gan = data_loader.load_gan_data()
+                x_train.extend(x_gan)
+                y_train.extend(y_gan)
 
                 # Performance history
                 all_train_loss = np.zeros(n_epochs)

@@ -10,16 +10,19 @@ import re
 
 class NonSeqDataLoader(object):
 
-    def __init__(self, data_dir, n_folds, fold_idx):
+    def __init__(self, data_dir, n_folds, fold_idx, x_key='x', y_key='y'):
         self.data_dir = data_dir
+        self.gan_dir = 'data/gan'
         self.n_folds = n_folds
         self.fold_idx = fold_idx
+        self.x_key = x_key
+        self.y_key = y_key
 
     def _load_npz_file(self, npz_file):
         """Load data and labels from a npz file."""
         with np.load(npz_file) as f:
-            data = f["x"]
-            labels = f["y"]
+            data = f[self.x_key]
+            labels = f[self.y_key]
             sampling_rate = f["fs"]
         return data, labels, sampling_rate
 
@@ -69,7 +72,7 @@ class NonSeqDataLoader(object):
 
         return data_train, label_train, data_val, label_val
 
-    def load_train_data(self, n_files=None):
+    def load_train_data(self, n_files=None, oversample=True):
         # Remove non-mat files, and perform ascending sort
         allfiles = os.listdir(self.data_dir)
         npzfiles = []
@@ -111,6 +114,20 @@ class NonSeqDataLoader(object):
         print("Load validation set:")
         data_val, label_val = self._load_npz_list_files(npz_files=subject_files)
         print(" ")
+        
+        #gan_data, gan_labels = SeqDataLoader.load_subject_data(
+        #        os.path.split(subject_files[0])[0], 
+        #        self.fold_idx, key_append='_')
+        #np.savez('fold0.npz', 
+        #        gan_data = gan_data,
+        #        gan_labels = gan_labels,
+        #        data_train = data_train,
+        #        data_val = data_val,
+        #        label_train = label_train,
+        #        label_val = label_val)
+        #import pdb; pdb.set_trace()
+        if not oversample:
+            return data_train, label_train, data_val, label_val
 
         # Reshape the data to match the input of the model - conv2d
         data_train = np.squeeze(data_train)
@@ -177,19 +194,56 @@ class NonSeqDataLoader(object):
 
         return data_val, label_val
 
+    def load_gan_data(self):
+        # Remove non-mat files, and perform ascending sort
+        allfiles = os.listdir(self.gan_dir)
+        npzfiles = []
+        for idx, f in enumerate(allfiles):
+            if ".npz" in f:
+                npzfiles.append(os.path.join(self.gan_dir, f))
+        npzfiles.sort()
+
+        subject_files = []
+        for idx, f in enumerate(allfiles):
+            pattern = re.compile(r'GAN%02d.npz' % self.fold_idx)
+            if pattern.match(f):
+                subject_files.append(os.path.join(self.gan_dir, f))
+        
+        train_files = list(set(npzfiles) - set(subject_files))
+        train_files.sort()
+        subject_files.sort()
+
+        print("\n========== [Fold-{}] ==========\n".format(self.fold_idx))
+
+        print("Load GAN dataset:")
+        data_val, label_val = self._load_npz_list_files(train_files)
+
+        # Reshape the data to match the input of the model
+        data_val = np.squeeze(data_val)
+        data_val = data_val[:, :, np.newaxis, np.newaxis]
+
+        # Casting
+        data_val = data_val.astype(np.float32)
+        label_val = label_val.astype(np.int32)
+
+        return data_val, label_val
+
 
 class SeqDataLoader(object):
 
-    def __init__(self, data_dir, n_folds, fold_idx):
+    def __init__(self, data_dir, n_folds, fold_idx, x_key='x', y_key='y'):
         self.data_dir = data_dir
+        self.gan_dir = 'data/gan'
         self.n_folds = n_folds
         self.fold_idx = fold_idx
+        self.x_key = x_key
+        self.y_key = y_key
 
     def _load_npz_file(self, npz_file):
         """Load data and labels from a npz file."""
         with np.load(npz_file) as f:
-            data = f["x"]
-            labels = f["y"]
+            data = f[self.x_key]
+            labels = f[self.y_key]
             sampling_rate = f["fs"]
         return data, labels, sampling_rate
 
@@ -257,8 +311,42 @@ class SeqDataLoader(object):
         data_val, label_val = self._load_npz_list_files(val_files)
 
         return data_val, label_val
+    
+    def load_gan_data(self):
+        # Remove non-mat files, and perform ascending sort
+        allfiles = os.listdir(self.gan_dir)
+        npzfiles = []
+        for idx, f in enumerate(allfiles):
+            if ".npz" in f:
+                npzfiles.append(os.path.join(self.gan_dir, f))
+        npzfiles.sort()
 
-    def load_train_data(self, n_files=None):
+        subject_files = []
+        for idx, f in enumerate(allfiles):
+            pattern = re.compile(r'GAN%02d.npz' % self.fold_idx)
+            if pattern.match(f):
+                subject_files.append(os.path.join(self.gan_dir, f))
+        
+        train_files = list(set(npzfiles) - set(subject_files))
+        train_files.sort()
+        subject_files.sort()
+
+        print("\n========== [Fold-{}] ==========\n".format(self.fold_idx))
+
+        print("Load GAN dataset:")
+        data_val, label_val = self._load_npz_list_files(train_files)
+
+        # Reshape the data to match the input of the model
+        #data_val = np.concatenate(data_val)
+        #label_val = np.concatenate(label_val)
+
+        # Casting
+        #data_val = data_val.astype(np.float32)
+        #label_val = label_val.astype(np.int32)
+
+        return data_val, label_val
+
+    def load_train_data(self, n_files=None, oversample=True):
         # Remove non-mat files, and perform ascending sort
         allfiles = os.listdir(self.data_dir)
         npzfiles = []
@@ -312,7 +400,7 @@ class SeqDataLoader(object):
         return data_train, label_train, data_val, label_val
 
     @staticmethod
-    def load_subject_data(data_dir, subject_idx):
+    def load_subject_data(data_dir, subject_idx, key_append=''):
         # Remove non-mat files, and perform ascending sort
         allfiles = os.listdir(data_dir)
         subject_files = []
@@ -331,8 +419,8 @@ class SeqDataLoader(object):
         def load_npz_file(npz_file):
             """Load data and labels from a npz file."""
             with np.load(npz_file) as f:
-                data = f["x"]
-                labels = f["y"]
+                data = f["x" + key_append]
+                labels = f["y" + key_append]
                 sampling_rate = f["fs"]
             return data, labels, sampling_rate
 
